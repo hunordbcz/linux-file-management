@@ -8,27 +8,29 @@
 #include <unistd.h>
 
 #define MAX_PATH_LEN 1000
-#define BUF_SIZE 1000
+#define BUF_SIZE 110000
 
 typedef struct arguments {
     char *path;
     char **options;
+    int sect_nr;
+    int line_nr;
     int no_of_options;
     int recursive;
 } Arguments, *pArguments;
 
 typedef struct section {
-    char name[16];
-    char type[2];
+    char name[17];
+    short type;
     int offset;
-    short size;
+    int size;
 } Section, *pSection;
 
 typedef struct header {
     char magic[4];
     short size;
     short version;
-    char no_of_sections;
+    u_int8_t no_of_sections;
     pSection *pSections;
 } Header, *pHeader;
 
@@ -36,7 +38,11 @@ pArguments parseArgumentsList(int argc, char **argv);
 
 int listFiles(pArguments arguments);
 
-int parseHeader(pArguments arguments);
+pHeader parseHeader(pArguments arguments);
+
+void printHeader(pHeader header);
+
+char *extractLine(pHeader header, pArguments arguments);
 
 int main(int argc, char **argv) {
     if (argc >= 2) {
@@ -57,11 +63,23 @@ int main(int argc, char **argv) {
                 printf("ERROR\nInvalid arguments\n");
                 exit(1);
             }
-            parseHeader(arguments);
+            pHeader header = parseHeader(arguments);
+            if (header != NULL) {
+                printHeader(header);
+            }
         } else if (!strcmp(argv[1], "extract")) {
-
+            pArguments arguments = parseArgumentsList(argc, argv);
+            if (arguments == NULL) {
+                printf("ERROR\nInvalid arguments\n");
+                exit(1);
+            }
+            pHeader header = parseHeader(arguments);
+            char *line = extractLine(header, arguments);
+            if (line != NULL) {
+                printf("SUCCESS\n%s", line);
+            }
         } else if (!strcmp(argv[1], "findall")) {
-
+            printf("SUCCESS");
         } else if (!strcmp(argv[1], "parse")) {
 
         }
@@ -81,6 +99,10 @@ pArguments parseArgumentsList(int argc, char **argv) {
             snprintf(data->path, MAX_PATH_LEN, "%s", argv[i] + 5);
         } else if (!strcmp(argv[i], "recursive")) {
             data->recursive = 1;
+        } else if (!strncmp(argv[i], "section=", 8)) {
+            data->sect_nr = atoi(argv[i] + 8);
+        } else if (!strncmp(argv[i], "line=", 5)) {
+            data->line_nr = atoi(argv[i] + 5);
         } else { // Filter option
             if (data->no_of_options == 0) {
                 data->options = (char **) malloc(sizeof(char *));
@@ -124,121 +146,174 @@ int listFiles(pArguments arguments) {
             strcat(arguments->path, "/");
             listFiles(arguments);
         }
-        if (S_ISREG(inode.st_mode) || !arguments->no_of_options) {
-            int good = 1;
-            for (int i = 0; i < arguments->no_of_options; i++) {
-                char *value = (char *) malloc(sizeof(char));
-                strcpy(value, arguments->options[i]);
-                char *option = strtok_r(value, "=", &value);
-                if (!strcmp(option, "size_smaller")) {
-                    if (inode.st_size >= atoi(value)) {
-                        good = 0;
-                    }
-                }
-                if (!strcmp(option, "name_starts_with")) {
-                    if (strncmp(name, value, strlen(value)) != 0) {
-                        good = 0;
-                    }
+        int good = 1;
+        for (int i = 0; i < arguments->no_of_options; i++) {
+            char *value = (char *) malloc(sizeof(arguments->options[i]));
+            strcpy(value, arguments->options[i]);
+            char *option = strtok_r(value, "=", &value);
+            if (!strcmp(option, "size_smaller")) {
+                if (inode.st_size >= atoi(value) || !S_ISREG(inode.st_mode)) {
+                    good = 0;
                 }
             }
-            if (good) {
-                printf("%s\n", path);
+            if (!strcmp(option, "name_starts_with")) {
+                if (strncmp(name, value, strlen(value)) != 0) {
+                    good = 0;
+                }
             }
+//            free(value);
+            free(option);
+        }
+        if (good) {
+            printf("%s\n", path);
         }
     }
     closedir(dir);
     return 1;
 }
 
-int get_line(int fd, char *line, int line_no, int max_length, int *line_length) {
-    char temp;
-    while (read(fd, &temp, 1) != -1) {
-        printf("%c", temp);
-        if (temp == '\n') line_no--;
-        if (!line_no) {
-            int i;
-            for (i = 0; (i < max_length && temp != '\n'); i++) {
-                if (read(fd, &temp, 1) == -1) {
-                    break;
-                }
-                line[i] = temp;
-            }
-
-            *line_length = i;
-            return 0;
-        }
-    }
-
-    return -1;
-}
-
-
-int parseHeader(pArguments arguments) {
+pHeader parseHeader(pArguments arguments) {
     int fd;
-    char *buff = (char *) malloc(BUF_SIZE);
-    memset(buff, '\0', BUF_SIZE);
-
     if (access(arguments->path, R_OK) == -1) {
         chmod(arguments->path, S_IRUSR | S_IRGRP | S_IROTH);
     }
-
     if ((fd = open(arguments->path, O_RDONLY, 0644)) < 0) {
         printf("ERROR\nUnable to open file\n");
         exit(1);
     }
 
-    int line = 0;
-
     pHeader header = (pHeader) malloc(sizeof(Header));
-
     if (read(fd, header->magic, sizeof(header->magic)) < 0) {
         printf("ERROR\nUnable to read\n");
-        exit(1);
+        return NULL;
     }
-    printf("%s ", header->magic);
+    if (strcmp(header->magic, "79ws")) {
+        printf("ERROR\nwrong magic\n");
+        return NULL;
+    }
 
-    char tmp;
-    read(fd, tmp, 1);
-    if (read(fd, buff, 25) < 0) {
+    if (read(fd, &header->size, sizeof(header->size)) < 0) {
         printf("ERROR\nUnable to read\n");
-        exit(1);
+        return NULL;
     }
-    header->size = atoi(buff);
 
-    memset(buff, 0, BUF_SIZE);
-    if (read(fd, buff, sizeof(header->version)) < 0) {
+    if (read(fd, &header->version, sizeof(header->version)) < 0) {
         printf("ERROR\nUnable to read\n");
-        exit(1);
+        return NULL;
     }
-    printf("%s,%d", buff, atoi(buff));
-    header->version = atoi(buff);
+    if (!(header->version >= 83 && header->version <= 141)) {
+        printf("ERROR\nwrong version\n");
+        return NULL;
+    }
 
-    memset(buff, 0, BUF_SIZE);
-    if (read(fd, buff, sizeof(header->no_of_sections)) < 0) {
+    if (read(fd, &header->no_of_sections, sizeof(header->no_of_sections)) < 0) {
         printf("ERROR\nUnable to read\n");
-        exit(1);
+        return NULL;
     }
-    header->no_of_sections = atoi(buff);
+    if (!(header->no_of_sections >= 5 && header->no_of_sections <= 10)) {
+        printf("ERROR\nwrong sect_nr\n");
+        return NULL;
+    }
 
-//    char temp;
-//    while (read(fd, &temp, 1) != -1)
-//    {
-//        printf("%c", temp);
-//        if (temp == '\n') line_no --;
-//        if(!line_no){
-//            int i;
-//            for (i = 0; (i < max_length && temp != '\n'); i++)
-//            {
-//                if (read(fd, &temp, 1) == -1)
-//                {
-//                    break;
-//                }
-//                line[i] = temp;
-//            }
-//
-//            *line_length = i;
-//            return 0;
-//        }
-//    }
-    return 0;
+    header->pSections = (pSection *) malloc(sizeof(Section) * header->no_of_sections);
+    for (int i = 0; i < header->no_of_sections; i++) {
+        pSection section = (pSection) malloc(sizeof(Section));
+
+        if (read(fd, section->name, sizeof(section->name) - 1) < 0) {
+            printf("ERROR\nUnable to read\n");
+            return NULL;
+        }
+        strcat(section->name, "\0");
+
+        if (read(fd, &section->type, sizeof(section->type)) < 0) {
+            printf("ERROR\nUnable to read\n");
+            return NULL;
+        }
+        if (!(section->type == 17 || section->type == 18)) {
+            printf("ERROR\nwrong sect_types\n");
+            return NULL;
+        }
+
+        if (read(fd, &section->offset, sizeof(section->offset)) < 0) {
+            printf("ERROR\nUnable to read\n");
+            return NULL;
+        }
+
+        if (read(fd, &section->size, sizeof(section->size)) < 0) {
+            printf("ERROR\nUnable to read\n");
+            return NULL;
+        }
+
+        header->pSections[i] = section;
+    }
+    close(fd);
+
+    return header;
 }
+
+void printHeader(pHeader header) {
+    printf("SUCCESS\n");
+    printf("version=%d\n", header->version);
+    printf("nr_sections=%d\n", header->no_of_sections);
+    for (int i = 0; i < header->no_of_sections; i++) {
+        printf("section%d: ", i + 1);
+        printf("%s ", header->pSections[i]->name);
+        printf("%d ", header->pSections[i]->type);
+        printf("%d\n", header->pSections[i]->size);
+    }
+}
+
+char *extractLine(pHeader header, pArguments arguments) {
+    ///Check if File can be opened
+    int fd;
+    if (access(arguments->path, R_OK) == -1) {
+        chmod(arguments->path, S_IRUSR | S_IRGRP | S_IROTH);
+    }
+    if ((fd = open(arguments->path, O_RDONLY, 0644)) < 0) {
+        printf("ERROR\ninvalid file\n");
+        exit(1);
+    }
+
+    ///Check if section exists
+    if (header->no_of_sections < arguments->sect_nr) {
+        printf("ERROR\ninvalid section");
+        return NULL;
+    }
+    int offset = header->pSections[arguments->sect_nr - 1]->offset;
+    int size = header->pSections[arguments->sect_nr - 1]->size;
+
+    char *line = (char *) malloc(BUF_SIZE);
+    int currentLine = 1;
+
+    char buf[2];
+    buf[1] = '\0';
+    char bufPrev = '\r';
+    lseek(fd, offset + --size, SEEK_SET);
+    read(fd, &buf[0], 1);
+    do {
+        lseek(fd, offset + --size, SEEK_SET);
+
+        if (!(buf[0] == '\n' || buf[0] == '\r')) {
+            strcat(line, buf);
+        }
+
+        if (bufPrev == '\n' && buf[0] == '\r') {
+            strcat(line, "\0");
+            if (arguments->line_nr == currentLine++) {
+                return line;
+            }
+            memset(line, '\0', BUF_SIZE);
+            continue;
+        }
+        bufPrev = buf[0];
+    } while (read(fd, &buf[0], 1) != -1 && size > -1);
+
+    strcat(line, "\0");
+    if (arguments->line_nr == currentLine) {
+        return line;
+    }
+
+    printf("ERROR\ninvalid line");
+    return NULL;
+}
+
