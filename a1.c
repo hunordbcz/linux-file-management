@@ -193,11 +193,11 @@ int listFiles(pArguments arguments) {
             continue;
         }
 
-        sprintf(path, "%s%s", folder, name);
+        snprintf(path, MAX_PATH_LEN, "%s%s", folder, name);
         lstat(path, &inode);
 
         if (dirEntry->d_type == DT_DIR && arguments->recursive) {
-            sprintf(arguments->path, "%s/", path);
+            snprintf(arguments->path, MAX_PATH_LEN, "%s/", path);
             listFiles(arguments);
         }
         int good = 1;
