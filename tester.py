@@ -555,135 +555,135 @@ def generateTests(data):
                   [data["variant"]],  # expected output
                   False,  # disregard line order
                   ])
-    # # simple listing
-    # dirs1 = dirs[:]
-    # shuffle(dirs1)
-    # count = 0
-    # for path in dirs1:
-    #     cmd = ["list", "path=%s" % path.decode()]
-    #     timeLimit, result = compute_time(perform_a1, data, cmd)
-    #     if (count < 4 and len(result) > 0) or len(result) > 2:
-    #         count += 1
-    #         tests.append(["simple_listing_%d" % count,
-    #                       cmd,
-    #                       timeLimit,
-    #                       result,
-    #                       True
-    #                       ])
-    #         if count >= 5:
-    #             break
-    #
-    # # recursive listing
-    # dirs1 = dirs[:]
-    # shuffle(dirs1)
-    # dirs1.remove(dirs[0])
-    # dirs1.insert(0, dirs[0])
-    # count = 0
-    # for path in dirs1:
-    #     cmd = ["list", "recursive", "path=%s" % path.decode()]
-    #     timeLimit, result = compute_time(perform_a1, data, cmd)
-    #     if (count < 4 and len(result) > 0) or len(result) > 2:
-    #         count += 1
-    #         tests.append(["recursive_listing_%d" % count,
-    #                       cmd,
-    #                       timeLimit,
-    #                       result,
-    #                       True
-    #                       ])
-    #         if count >= 5:
-    #             break
-    #
-    # # filtered listing
-    # dirs1 = dirs[:]
-    # shuffle(dirs1)
-    # countSize = 0
-    # countName = 0
-    # countPerm = 0
-    # for path in dirs1:
-    #     if countSize < 6 and (data["filter_size_greater"] or data["filter_size_smaller"]):
-    #         if data["filter_size_greater"]:
-    #             filter = "size_greater"
-    #         else:
-    #             filter = "size_smaller"
-    #         minSize, maxSize = getSizeInterval([os.path.join(path, x) for x in os.listdir(path)])
-    #         if minSize is not None:
-    #             size = random.randint(minSize, maxSize)
-    #             cmd = ["list", "%s=%d" % (filter, size), "path=%s" % path.decode()]
-    #             if countSize % 2 == 1:
-    #                 cmd.insert(random.randint(1, 2), "recursive")
-    #             timeLimit, result = compute_time(perform_a1, data, cmd)
-    #             if len(result) > 1:
-    #                 countSize += 1
-    #                 tests.append(["%s_%d" % (filter, countSize),
-    #                               cmd,
-    #                               timeLimit,
-    #                               result,
-    #                               True
-    #                               ])
-    #     if countName < 6 and (data["filter_name_starts_with"] or data["filter_name_ends_with"]):
-    #         names = os.listdir(path)
-    #         if len(names) >= 3:
-    #             sample = names[random.randint(0, len(names) - 1)]
-    #             if data["filter_name_starts_with"]:
-    #                 filter = "name_starts_with"
-    #                 substr = sample[:random.randint(1, 4)]
-    #             else:
-    #                 filter = "name_ends_with"
-    #                 substr = sample[-random.randint(2, 4):]
-    #             substr = substr.decode()
-    #             cmd = ["list", "%s=%s" % (filter, substr), "path=%s" % path.decode()]
-    #             if countSize % 2 == 1:
-    #                 cmd.insert(random.randint(1, 2), "recursive")
-    #             timeLimit, result = compute_time(perform_a1, data, cmd)
-    #             if len(result) > 1:
-    #                 countName += 1
-    #                 tests.append(["%s_%d" % (filter, countName),
-    #                               cmd,
-    #                               timeLimit,
-    #                               result,
-    #                               True
-    #                               ])
-    #     if countPerm < 6 and (
-    #             data["filter_permissions"] or data["filter_has_perm_execute"] or data["filter_has_perm_write"]):
-    #         names = os.listdir(path)
-    #         if len(names) >= 2:
-    #             if data["filter_permissions"]:
-    #                 filter = "permissions"
-    #                 sample = names[random.randint(0, len(names) - 1)]
-    #                 perm = get_perm(os.path.join(path, sample))
-    #                 cmd = ["list", "permissions=%s" % perm, "path=%s" % path.decode()]
-    #                 if countSize % 2 == 1:
-    #                     cmd.insert(random.randint(1, 2), "recursive")
-    #             else:
-    #                 if data["filter_has_perm_execute"]:
-    #                     filter = "has_perm_execute"
-    #                 else:
-    #                     filter = "has_perm_write"
-    #                 cmd = ["list", filter, "path=%s" % path.decode()]
-    #                 if countSize % 2 == 1:
-    #                     cmd.insert(random.randint(1, 2), "recursive")
-    #             timeLimit, result = compute_time(perform_a1, data, cmd)
-    #             if len(result) > 1:
-    #                 countPerm += 1
-    #                 tests.append(["%s_%d" % (filter, countPerm),
-    #                               cmd,
-    #                               timeLimit,
-    #                               result,
-    #                               True
-    #                               ])
-    # # parsing section files
-    # files1 = files[:]
-    # shuffle(files1)
-    # files1 = files1[:10]
-    # for count, path in enumerate(files1):
-    #     cmd = ["parse", "path=%s" % path.decode()]
-    #     timeLimit, result = compute_time(perform_a1, data, cmd)
-    #     tests.append(["parse_%d" % (count + 1),
-    #                   cmd,
-    #                   timeLimit,
-    #                   result,
-    #                   False
-    #                   ])
+    # simple listing
+    dirs1 = dirs[:]
+    shuffle(dirs1)
+    count = 0
+    for path in dirs1:
+        cmd = ["list", "path=%s" % path.decode()]
+        timeLimit, result = compute_time(perform_a1, data, cmd)
+        if (count < 4 and len(result) > 0) or len(result) > 2:
+            count += 1
+            tests.append(["simple_listing_%d" % count,
+                          cmd,
+                          timeLimit,
+                          result,
+                          True
+                          ])
+            if count >= 5:
+                break
+
+    # recursive listing
+    dirs1 = dirs[:]
+    shuffle(dirs1)
+    dirs1.remove(dirs[0])
+    dirs1.insert(0, dirs[0])
+    count = 0
+    for path in dirs1:
+        cmd = ["list", "recursive", "path=%s" % path.decode()]
+        timeLimit, result = compute_time(perform_a1, data, cmd)
+        if (count < 4 and len(result) > 0) or len(result) > 2:
+            count += 1
+            tests.append(["recursive_listing_%d" % count,
+                          cmd,
+                          timeLimit,
+                          result,
+                          True
+                          ])
+            if count >= 5:
+                break
+
+    # filtered listing
+    dirs1 = dirs[:]
+    shuffle(dirs1)
+    countSize = 0
+    countName = 0
+    countPerm = 0
+    for path in dirs1:
+        if countSize < 6 and (data["filter_size_greater"] or data["filter_size_smaller"]):
+            if data["filter_size_greater"]:
+                filter = "size_greater"
+            else:
+                filter = "size_smaller"
+            minSize, maxSize = getSizeInterval([os.path.join(path, x) for x in os.listdir(path)])
+            if minSize is not None:
+                size = random.randint(minSize, maxSize)
+                cmd = ["list", "%s=%d" % (filter, size), "path=%s" % path.decode()]
+                if countSize % 2 == 1:
+                    cmd.insert(random.randint(1, 2), "recursive")
+                timeLimit, result = compute_time(perform_a1, data, cmd)
+                if len(result) > 1:
+                    countSize += 1
+                    tests.append(["%s_%d" % (filter, countSize),
+                                  cmd,
+                                  timeLimit,
+                                  result,
+                                  True
+                                  ])
+        if countName < 6 and (data["filter_name_starts_with"] or data["filter_name_ends_with"]):
+            names = os.listdir(path)
+            if len(names) >= 3:
+                sample = names[random.randint(0, len(names) - 1)]
+                if data["filter_name_starts_with"]:
+                    filter = "name_starts_with"
+                    substr = sample[:random.randint(1, 4)]
+                else:
+                    filter = "name_ends_with"
+                    substr = sample[-random.randint(2, 4):]
+                substr = substr.decode()
+                cmd = ["list", "%s=%s" % (filter, substr), "path=%s" % path.decode()]
+                if countSize % 2 == 1:
+                    cmd.insert(random.randint(1, 2), "recursive")
+                timeLimit, result = compute_time(perform_a1, data, cmd)
+                if len(result) > 1:
+                    countName += 1
+                    tests.append(["%s_%d" % (filter, countName),
+                                  cmd,
+                                  timeLimit,
+                                  result,
+                                  True
+                                  ])
+        if countPerm < 6 and (
+                data["filter_permissions"] or data["filter_has_perm_execute"] or data["filter_has_perm_write"]):
+            names = os.listdir(path)
+            if len(names) >= 2:
+                if data["filter_permissions"]:
+                    filter = "permissions"
+                    sample = names[random.randint(0, len(names) - 1)]
+                    perm = get_perm(os.path.join(path, sample))
+                    cmd = ["list", "permissions=%s" % perm, "path=%s" % path.decode()]
+                    if countSize % 2 == 1:
+                        cmd.insert(random.randint(1, 2), "recursive")
+                else:
+                    if data["filter_has_perm_execute"]:
+                        filter = "has_perm_execute"
+                    else:
+                        filter = "has_perm_write"
+                    cmd = ["list", filter, "path=%s" % path.decode()]
+                    if countSize % 2 == 1:
+                        cmd.insert(random.randint(1, 2), "recursive")
+                timeLimit, result = compute_time(perform_a1, data, cmd)
+                if len(result) > 1:
+                    countPerm += 1
+                    tests.append(["%s_%d" % (filter, countPerm),
+                                  cmd,
+                                  timeLimit,
+                                  result,
+                                  True
+                                  ])
+    # parsing section files
+    files1 = files[:]
+    shuffle(files1)
+    files1 = files1[:10]
+    for count, path in enumerate(files1):
+        cmd = ["parse", "path=%s" % path.decode()]
+        timeLimit, result = compute_time(perform_a1, data, cmd)
+        tests.append(["parse_%d" % (count + 1),
+                      cmd,
+                      timeLimit,
+                      result,
+                      False
+                      ])
     # corrupted files
     for count, path in enumerate(corrupted):
         cmd = ["parse", "path=%s" % path.decode()]
@@ -695,20 +695,20 @@ def generateTests(data):
                       False
                       ])
 
-    # # extracting lines
-    # files1 = files[:]
-    # shuffle(files1)
-    # files1 = files1[:10] + huge
-    # for count, path in enumerate(files1):
-    #     sectNr, lineNr = parseFile(data, path, randomLine=True)
-    #     cmd = ["extract", "path=%s" % path.decode(), "section=%d" % sectNr, "line=%d" % lineNr]
-    #     timeLimit, result = compute_time(perform_a1, data, cmd)
-    #     tests.append(["extract_%d" % (count + 1),
-    #                   cmd,
-    #                   timeLimit,
-    #                   result,
-    #                   False
-    #                   ])
+    # extracting lines
+    files1 = files[:]
+    shuffle(files1)
+    files1 = files1[:10] + huge
+    for count, path in enumerate(files1):
+        sectNr, lineNr = parseFile(data, path, randomLine=True)
+        cmd = ["extract", "path=%s" % path.decode(), "section=%d" % sectNr, "line=%d" % lineNr]
+        timeLimit, result = compute_time(perform_a1, data, cmd)
+        tests.append(["extract_%d" % (count + 1),
+                      cmd,
+                      timeLimit,
+                      result,
+                      False
+                      ])
 
     # findall
     dirs1 = dirs[:]

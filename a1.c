@@ -9,7 +9,16 @@
 
 #define MAX_PATH_LEN 10000
 
+enum type {
+    VARIANT,
+    LIST,
+    PARSE,
+    EXTRACT,
+    FINDALL
+} Type;
+
 typedef struct arguments {
+    int type;
     char *path;
     char **options;
     int sect_nr;
@@ -49,35 +58,45 @@ void freeHeader(pHeader header);
 
 int main(int argc, char **argv) {
     if (argc >= 2) {
-        if (!strcmp(argv[1], "variant")) {
-            printf("82417\n");
-            return 0;
-        }
         pArguments arguments = parseArgumentsList(argc, argv);
         if (arguments == NULL) {
             printf("ERROR\nInvalid arguments\n");
             return -1;
         }
 
-        if (!strcmp(argv[1], "list")) {
-            printf("SUCCESS\n");
-            listFiles(arguments);
-        } else if (!strcmp(argv[1], "parse")) {
-            pHeader header = parseHeader(arguments->path, 1);
-            if (header != NULL) {
-                printHeader(header);
+        switch (arguments->type) {
+            case VARIANT: {
+                printf("82417\n");
+                break;
             }
-            freeHeader(header);
-        } else if (!strcmp(argv[1], "extract")) {
-            pHeader header = parseHeader(arguments->path, 0);
-            if (header != NULL) {
-                extractLine(header, arguments->path, arguments->sect_nr, arguments->line_nr);
+            case LIST: {
+                printf("SUCCESS\n");
+                listFiles(arguments);
+                break;
+            }
+            case PARSE: {
+                pHeader header = parseHeader(arguments->path, 1);
+                if (header != NULL) {
+                    printHeader(header);
+                }
+                freeHeader(header);
+                break;
+            }
+            case EXTRACT: {
+                pHeader header = parseHeader(arguments->path, 0);
+                if (header != NULL) {
+                    extractLine(header, arguments->path, arguments->sect_nr, arguments->line_nr);
 
+                }
+                freeHeader(header);
+                break;
             }
-            freeHeader(header);
-        } else if (!strcmp(argv[1], "findall")) {
-            printf("SUCCESS\n");
-            findAll(arguments);
+            case FINDALL: {
+                printf("SUCCESS\n");
+                findAll(arguments);
+            }
+            default:
+                break;
         }
 
         free(arguments->options);
@@ -109,12 +128,12 @@ int findAll(pArguments arguments) {
 }
 
 pArguments parseArgumentsList(int argc, char **argv) {
-    if (argc < 3) {
+    if (argc < 2) {
         return NULL;
     }
 
     pArguments data = (pArguments) malloc(sizeof(Arguments));
-    for (int i = 2; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         if (!strncmp(argv[i], "path=", 5)) {
             data->path = (char *) malloc(MAX_PATH_LEN);
             snprintf(data->path, MAX_PATH_LEN, "%s", argv[i] + 5);
@@ -124,11 +143,23 @@ pArguments parseArgumentsList(int argc, char **argv) {
             data->sect_nr = atoi(argv[i] + 8);
         } else if (!strncmp(argv[i], "line=", 5)) {
             data->line_nr = atoi(argv[i] + 5);
-        } else { // Filter option
+        } else if (strchr(argv[i], '=')) { // Filter option
             if (data->no_of_options == 0) {
                 data->options = (char **) malloc(sizeof(char *));
             }
             data->options[data->no_of_options++] = argv[i];
+        } else { // type
+            if (!strcmp(argv[i], "variant")) {
+                data->type = VARIANT;
+            } else if (!strcmp(argv[i], "list")) {
+                data->type = LIST;
+            } else if (!strcmp(argv[i], "parse")) {
+                data->type = PARSE;
+            } else if (!strcmp(argv[i], "extract")) {
+                data->type = EXTRACT;
+            } else if (!strcmp(argv[i], "findall")) {
+                data->type = FINDALL;
+            }
         }
     }
 
