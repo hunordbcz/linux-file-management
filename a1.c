@@ -44,7 +44,7 @@ typedef struct header {
 
 pArguments parseArgumentsList(int argc, char **argv);
 
-int listFiles(pArguments arguments);
+int listFiles(pArguments arguments, int first);
 
 pHeader parseHeader(char *path, int showError);
 
@@ -70,8 +70,7 @@ int main(int argc, char **argv) {
                 break;
             }
             case LIST: {
-                printf("SUCCESS\n");
-                listFiles(arguments);
+                listFiles(arguments, 1);
                 break;
             }
             case PARSE: {
@@ -92,7 +91,6 @@ int main(int argc, char **argv) {
                 break;
             }
             case FINDALL: {
-                printf("SUCCESS\n");
                 findAll(arguments);
             }
             default:
@@ -125,7 +123,7 @@ int findAll(pArguments arguments) {
     }
     arguments->options[arguments->no_of_options++] = "sections_smaller=910";
     arguments->recursive = 1;
-    listFiles(arguments);
+    listFiles(arguments, 1);
     return 1;
 }
 
@@ -168,7 +166,7 @@ pArguments parseArgumentsList(int argc, char **argv) {
     return data;
 }
 
-int listFiles(pArguments arguments) {
+int listFiles(pArguments arguments, int first) {
     DIR *dir;
     struct dirent *dirEntry;
     struct stat inode;
@@ -180,6 +178,8 @@ int listFiles(pArguments arguments) {
     if (dir == NULL) {
         printf("ERROR\ninvalid directory path\n");
         exit(1);
+    } else if (first) {
+        printf("SUCCESS\n");
     }
 
     if (arguments->path[strlen(arguments->path) - 1] != '/') {
