@@ -102,6 +102,8 @@ int main(int argc, char **argv) {
         free(arguments->options);
         free(arguments->path);
         free(arguments);
+    } else {
+        printf("Usage: %s [OPTIONS] [PARAMETERS] (arguments in any order)\n", argv[0]);
     }
     return 0;
 }
