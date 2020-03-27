@@ -83,10 +83,7 @@ int main(int argc, char **argv) {
             }
             case EXTRACT: {
                 pHeader header = parseHeader(arguments->path, 0);
-                if (header != NULL) {
-                    extractLine(header, arguments->path, arguments->sect_nr, arguments->line_nr);
-
-                }
+                extractLine(header, arguments->path, arguments->sect_nr, arguments->line_nr);
                 freeHeader(header);
                 break;
             }
@@ -380,7 +377,7 @@ int extractLine(pHeader header, char *path, int section_nr, int line_nr) {
     if (access(path, R_OK) == -1) {
         chmod(path, S_IRUSR | S_IRGRP | S_IROTH);
     }
-    if ((fd = open(path, O_RDONLY, 0644)) < 0) {
+    if ((fd = open(path, O_RDONLY, 0644)) < 0 || header == NULL) {
         printf("ERROR\ninvalid file\n");
         exit(1);
     }
