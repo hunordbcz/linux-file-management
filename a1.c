@@ -7,8 +7,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define MAX_PATH_LEN 1000
-#define BUF_SIZE 110000
+#define MAX_PATH_LEN 10000
 
 typedef struct arguments {
     char *path;
@@ -46,46 +45,57 @@ int extractLine(pHeader header, char *path, int section_nr, int line_nr);
 
 int findAll(pArguments arguments);
 
+void freeHeader(pHeader header);
+
 int main(int argc, char **argv) {
     if (argc >= 2) {
-        pArguments arguments = parseArgumentsList(argc, argv);
         if (!strcmp(argv[1], "variant")) {
             printf("82417\n");
-        } else if (!strcmp(argv[1], "list")) {
+            return 0;
+        }
+        pArguments arguments = parseArgumentsList(argc, argv);
+        if (arguments == NULL) {
+            printf("ERROR\nInvalid arguments\n");
+            return -1;
+        }
 
-            if (arguments == NULL) {
-                printf("ERROR\nInvalid arguments\n");
-                exit(1);
-            } else {
-                printf("SUCCESS\n");
-            }
+        if (!strcmp(argv[1], "list")) {
+            printf("SUCCESS\n");
             listFiles(arguments);
         } else if (!strcmp(argv[1], "parse")) {
-            if (arguments == NULL) {
-                printf("ERROR\nInvalid arguments\n");
-                exit(1);
-            }
             pHeader header = parseHeader(arguments->path, 1);
             if (header != NULL) {
                 printHeader(header);
             }
+            freeHeader(header);
         } else if (!strcmp(argv[1], "extract")) {
-            if (arguments == NULL) {
-                printf("ERROR\nInvalid arguments\n");
-                exit(1);
-            }
             pHeader header = parseHeader(arguments->path, 0);
-            extractLine(header, arguments->path, arguments->sect_nr, arguments->line_nr);
-//            if (line != NULL) {
-//                printf("SUCCESS\n%s\n", line);
-//            }
+            if (header != NULL) {
+                extractLine(header, arguments->path, arguments->sect_nr, arguments->line_nr);
+
+            }
+            freeHeader(header);
         } else if (!strcmp(argv[1], "findall")) {
             printf("SUCCESS\n");
             findAll(arguments);
         }
+
+        free(arguments->options);
+        free(arguments->path);
         free(arguments);
     }
     return 0;
+}
+
+void freeHeader(pHeader header) {
+    if (header == NULL) return;
+    for (int nrSection = 0; nrSection < header->no_of_sections; nrSection++) {
+        if (header->pSections != NULL) {
+            free(header->pSections[nrSection]);
+        }
+    }
+    free(header->pSections);
+    free(header);
 }
 
 int findAll(pArguments arguments) {
@@ -164,7 +174,7 @@ int listFiles(pArguments arguments) {
             char *option = strtok(valueOriginal, "=");
             char *value = strtok(NULL, "=");
             if (!strcmp(option, "size_smaller")) {
-                if (inode.st_size >= atoi(value) || !S_ISREG(inode.st_mode)) {
+                if (inode.st_size >= atoi(value) || dirEntry->d_type != DT_REG) {
                     good = 0;
                 }
             }
@@ -174,7 +184,7 @@ int listFiles(pArguments arguments) {
                 }
             }
             if (!strcmp(option, "sections_smaller")) {
-                if (!S_ISREG(inode.st_mode)) {
+                if (dirEntry->d_type != DT_REG) {
                     good = 0;
                 } else {
                     pHeader header = parseHeader(path, 0);
@@ -186,6 +196,7 @@ int listFiles(pArguments arguments) {
                             good = 0;
                         }
                     }
+                    freeHeader(header);
                 }
             }
         }
@@ -213,12 +224,14 @@ pHeader parseHeader(char *path, int showError) {
 
     if (read(fd, header->magic, sizeof(header->magic)) < 0) {
         printf("ERROR\nUnable to read\n");
+        freeHeader(header);
         return NULL;
     }
     if (strcmp(header->magic, "79ws") != 0) {
         if (showError) {
             printf("ERROR\nwrong magic\n");
         }
+        freeHeader(header);
         return NULL;
     }
 
@@ -226,7 +239,7 @@ pHeader parseHeader(char *path, int showError) {
         if (showError) {
             printf("ERROR\nUnable to read\n");
         }
-
+        freeHeader(header);
         return NULL;
     }
 
@@ -234,12 +247,14 @@ pHeader parseHeader(char *path, int showError) {
         if (showError) {
             printf("ERROR\nUnable to read\n");
         }
+        freeHeader(header);
         return NULL;
     }
     if (!(header->version >= 83 && header->version <= 141)) {
         if (showError) {
             printf("ERROR\nwrong version\n");
         }
+        freeHeader(header);
         return NULL;
     }
 
@@ -247,23 +262,28 @@ pHeader parseHeader(char *path, int showError) {
         if (showError) {
             printf("ERROR\nUnable to read\n");
         }
+        freeHeader(header);
         return NULL;
     }
     if (!(header->no_of_sections >= 5 && header->no_of_sections <= 10)) {
         if (showError) {
             printf("ERROR\nwrong sect_nr\n");
         }
+        freeHeader(header);
         return NULL;
     }
 
-    header->pSections = (pSection *) malloc(sizeof(Section) * header->no_of_sections);
+    header->pSections = (pSection *) malloc(sizeof(Section) * header->no_of_sections + 1);
+    memset(header->pSections, '\0', sizeof(Section) * header->no_of_sections + 1);
     for (int i = 0; i < header->no_of_sections; i++) {
         pSection section = (pSection) malloc(sizeof(Section));
-
+        memset(section, '\0', sizeof(Section));
         if (read(fd, section->name, sizeof(section->name) - 1) < 0) {
             if (showError) {
                 printf("ERROR\nUnable to read\n");
             }
+            free(section);
+            freeHeader(header);
             return NULL;
         }
         strcat(section->name, "\0");
@@ -272,12 +292,16 @@ pHeader parseHeader(char *path, int showError) {
             if (showError) {
                 printf("ERROR\nUnable to read\n");
             }
+            free(section);
+            freeHeader(header);
             return NULL;
         }
         if (!(section->type == 17 || section->type == 18)) {
             if (showError) {
                 printf("ERROR\nwrong sect_types\n");
             }
+            free(section);
+            freeHeader(header);
             return NULL;
         }
 
@@ -285,6 +309,8 @@ pHeader parseHeader(char *path, int showError) {
             if (showError) {
                 printf("ERROR\nUnable to read\n");
             }
+            free(section);
+            freeHeader(header);
             return NULL;
         }
 
@@ -292,6 +318,8 @@ pHeader parseHeader(char *path, int showError) {
             if (showError) {
                 printf("ERROR\nUnable to read\n");
             }
+            free(section);
+            freeHeader(header);
             return NULL;
         }
 
@@ -315,7 +343,6 @@ void printHeader(pHeader header) {
 }
 
 int extractLine(pHeader header, char *path, int section_nr, int line_nr) {
-    ///Check if File can be opened
     int fd;
     if (access(path, R_OK) == -1) {
         chmod(path, S_IRUSR | S_IRGRP | S_IROTH);
@@ -325,27 +352,21 @@ int extractLine(pHeader header, char *path, int section_nr, int line_nr) {
         exit(1);
     }
 
-    ///Check if section exists
     if (header->no_of_sections < section_nr) {
         printf("ERROR\ninvalid section");
-        return 0;
+        exit(1);
     }
     int offset = header->pSections[section_nr - 1]->offset;
     int size = header->pSections[section_nr - 1]->size;
-
-//    char *line = (char *) malloc(BUF_SIZE);
     int currentLine = 1;
-
     char buf = '\0';
     char bufPrev = '\r';
+
     lseek(fd, offset + --size, SEEK_SET);
     read(fd, &buf, 1);
+
     do {
         lseek(fd, offset + --size, SEEK_SET);
-
-//        if (!(buf[0] == '\n' || buf[0] == '\r')) {
-//            strcat(line, buf);
-//        }
         if (line_nr == currentLine) {
             if (bufPrev == '\r') {
                 printf("SUCCESS\n");
@@ -354,12 +375,9 @@ int extractLine(pHeader header, char *path, int section_nr, int line_nr) {
         }
 
         if (bufPrev == '\n' && buf == '\r') {
-//            strcat(line, "\0");
             if (line_nr == currentLine++) {
                 return 1;
             }
-//            memset(line, '\0', BUF_SIZE);
-//            continue;
         }
         bufPrev = buf;
         buf = '\0';
